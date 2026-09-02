@@ -2,6 +2,7 @@
 data/
 
 ../.idea/
+.idea/
 
 process_ingest/.xlsx
 process_ingest/.csv
