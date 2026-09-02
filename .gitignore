@@ -1,2 +1,5 @@
 .DS_Store
 data/
+
+process_ingest/.xlsx
+process_ingest/.csv
