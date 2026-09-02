@@ -3,6 +3,8 @@ data/
 
 ../.idea/
 .idea/
-
-process_ingest/.xlsx
-process_ingest/.csv
+/process_ingest/scope_24_cleaning_filled.csv
+/process_ingest/scope_cleaning_26_filled.xlsx
+/process_ingest/scope_cleaning_filled.csv
+/process_ingest/smp_cleaning_26_filled.xlsx
+/process_ingest/smp_cleaning_filled.csv
