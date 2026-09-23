@@ -48,7 +48,7 @@ def scope_head(path_in):
                 break
 
     data_start_line = len(header_lines)
-    df_data = pd.read_csv(path_in, skiprows=data_start_line +1, header=None, usecols=[0, 1])
+    df_data = pd.read_csv(path_in, skiprows=data_start_line +1, header=None)
 
     return header_lines, df_data
 
@@ -105,7 +105,7 @@ def trim_prof(file_path, ground, surface, pen_type, testing=False):
     depth_col = pen_map[pen_type]['depth_col']
     force_col = pen_map[pen_type]['force_col']
     prof = df.copy()
-    prof.columns = [depth_col, force_col]
+    prof.columns = [depth_col, force_col] + list(prof.columns[2:])
 
     # remove ground strike
     if ground != 0:
@@ -133,13 +133,14 @@ def process_spreadsheets(df, pen_path: str, pen_type):
     :return:
     '''
     # filter out bad profiles
-    valid_profiles = df[df['toss'] == 0].copy()
+    valid_profiles = df[(df['toss'] == 0) & (df['overload'] == 0)].copy()
+
 
     # rename columns
     valid_profiles['file_path'] = valid_profiles[1].apply(lambda fname: os.path.join(pen_path, fname))
     valid_profiles['surface'] = valid_profiles['air gap']
     valid_profiles['pen_type'] = pen_type
-    valid_profiles['testing'] = True # change to True if writing to another directory is desired
+    valid_profiles['testing'] = False # change to True if writing to another directory is desired
 
     # trim to relevant columns
     args_df = valid_profiles[['file_path', 'ground', 'surface', 'pen_type', 'testing']]
@@ -149,7 +150,7 @@ def process_spreadsheets(df, pen_path: str, pen_type):
         trim_prof(**record)
 
 # pass the cleaning spreadsheets onto the trimming functions, write
-#process_spreadsheets(all_smps, smp_path, 'smp')
+process_spreadsheets(all_smps, smp_path, 'smp')
 process_spreadsheets(all_scopes, scope_path, 'scope')
 
 
