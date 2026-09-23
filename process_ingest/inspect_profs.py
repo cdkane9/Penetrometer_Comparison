@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons, Button, TextBox
 
 
+
 '''
 plot profiles in 'scope(smp)_cleaning_YEAR_filled.xlsx' and identify if there's an 
 air gap, ground strike, overload, of if profile needs to be tossed
@@ -34,7 +35,8 @@ pen_type = 'smp'#scope or smp
 pen_path = 'smp_profiles_exports' #Snow_Scope or smp_profiles_exports
 pen_func = smp_head # scope_head or #smp_head
 
-excel_path = f'{pen_type}_cleaning_25_filled.xlsx'
+#excel_path = f'{pen_type}_cleaning_25_filled.xlsx'
+excel_path = f'{pen_type}_cleaning_all.xlsx'
 caca = pd.read_excel(excel_path)
 flag_cols = ['viewed', 'air gap', 'toss', 'ground', 'overload']
 
