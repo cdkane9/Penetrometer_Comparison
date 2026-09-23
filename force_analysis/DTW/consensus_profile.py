@@ -107,7 +107,7 @@ def export_consensus_profile(row, output_dir, pen):
     try:
         consensus_force = dtw_barycenter_averaging(
             formatted_arr,
-            max_iter=10,
+            max_iter=20,
             tol=1e-3,
             metric_params={'sakoe_chiba_radius': 15}
         ).ravel()
