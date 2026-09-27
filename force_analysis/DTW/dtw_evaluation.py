@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 import os
 from pathlib import Path
 from consensus_profile import scope_head, smp_head
-
 script_dir = Path(__file__).resolve().parent.parent.parent
 all_profiles = pd.read_csv(os.path.join(script_dir, 'process_ingest', 'all_profiles.csv'))
 
@@ -19,6 +18,8 @@ smp_data = smp_data[['pit_id', 'smp_profile_paths']]
 
 
 def plot_comparisons(df, pen_type:str):
+    loaders = {'smp': smp_head, 'scope': scope_head}
+
     ids = df['pit_id']
     og_paths = df[df.columns[1]]
 
@@ -28,6 +29,28 @@ def plot_comparisons(df, pen_type:str):
 
     for pit_id, path, og_paths in zip(ids, consensus_paths, og_paths):
         consensus = pd.read_csv(path)
+        og_paths = [path.strip() for path in og_paths.split(',')]
+        og_paths = [os.path.join(script_dir, path) for path in og_paths]
+
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.suptitle(f"{pit_id}")
+        ax1.set_title('Consensus proflie')
+        ax1.plot(consensus['force'], consensus['depth'])
+        ax1.invert_yaxis()
+
+        for path in og_paths:
+            if pen_type == 'smp':
+                og_prof = smp_head(path)
+            elif pen_type == 'scope':
+                og_prof = scope_head(path)
+            ax2.plot(og_prof['force'], og_prof['depth'], linewidth=0.5)
+
+        ax2.invert_yaxis()
+        ax2.set_title('OG profiles')
+        plt.show()
+
+    og_prof = None
+    consensus = None
         
 
 
