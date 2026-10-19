@@ -7,16 +7,17 @@ import numpy as np
 from pathlib import Path
 import os
 import re
+from matplotlib import pyplot as plt
 from force_analysis.DTW.consensus_profile import prep_prof
 
 
 script_dir = Path(__file__).resolve().parent.parent
 
 
-def get_ids(list):
+def get_ids(a_list):
     ''' Returns list of SITE_YYYYMMDD ids'''
     pattern = r'^.*?\d{8}(?:_TS_\d+)?'
-    return [re.match(pattern, f).group(0) for f in list if re.match(pattern, f)]
+    return [re.match(pattern, f).group(0) for f in a_list if re.match(pattern, f)]
 
 # directory for smp, scope, and ram profiles, stratigraphy profiles
 consensus_dir = os.path.join(script_dir, 'data', 'consensus')
@@ -47,23 +48,93 @@ def get_hardness(pen_df:pd.DataFrame, top:pd.Series, bot:pd.Series):
     :return:
     '''
 
-    # conver top and bot to depths, add 20% buffer
+    # convert top and bot to depths, add 20% buffer
     hs = top.iloc[0]
     delta = top - bot
-    t_depth = ((hs - top) + (0.1 * delta))
-    b_depth = ((hs - bot) - (0.1 * delta))
+    t_depths = ((hs - top) + (0.1 * delta))
+    b_depths = ((hs - bot) - (0.1 * delta))
 
-    # identify indices of penetromter that fall within given layers
-    layer_ix = pen_df.index[(pen_df['depth'] >= t_depth) &
-                            (pen_df['depth'] <= b_depth)]
+    means, maxs, mins = [], [], []
 
-    if layer_ix.empty: return np.nan, np.nan, np.nan
-    else:
-        layer_mean = np.nanmean(pen_df.loc[layer_ix, 'force'])
-        layer_max = np.nanmax(pen_df.loc[layer_ix, 'force'])
-        layer_min = np.nanmin(pen_df.loc[layer_ix, 'force'])
+    # Iterate over each layer's scalar boundaries
+    for t_depth, b_depth in zip(t_depths, b_depths):
+        # Compare penetrometer depth Series against scalar floats
+        mask = (pen_df['depth'] >= t_depth) & (pen_df['depth'] <= b_depth)
+        layer_force = pen_df.loc[mask, 'force']
 
-    return layer_mean, layer_max, layer_min
+        if layer_force.empty:
+            means.append(np.nan)
+            maxs.append(np.nan)
+            mins.append(np.nan)
+
+        else:
+            means.append(np.nanmean(layer_force))
+            maxs.append(np.nanmax(layer_force))
+            mins.append(np.nanmin(layer_force))
+
+
+    return means, maxs, mins
+
+
+def ram_smp() -> pd.DataFrame:
+    common_ids = list(set(ram_ids).intersection(smp_ids, strat_ids))
+    all_pit_dfs = []
+
+
+    for site_date in common_ids:
+        ram_path = os.path.join(ram_dir, site_date + '_sram.csv')
+        smp_path = os.path.join(smp_dir, site_date + '_match_smp.csv')
+        strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
+
+
+        # read in data files
+        strat_df = pd.read_csv(strat_path).copy()
+        ram_df_raw = pd.read_csv(ram_path)
+        # pull out depth and force from ram profile
+        ram_df = pd.DataFrame({
+            'depth': ram_df_raw['l_cm'],
+            'force': ram_df_raw['rr_N']
+        })
+        smp_df = pd.read_csv(smp_path)
+
+        '''fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.step(ram_df['force'], ram_df['depth'] * 10)
+        ax1.invert_yaxis()
+
+
+        ax2.plot(smp_df['force'], smp_df['depth'])
+        ax2.invert_yaxis()
+        fig.suptitle(site_date)
+        plt.show()'''
+
+        # find top and bottom of layers, convert to mm
+        top_cm = strat_df['top_cm']
+        bot_cm = strat_df['bottom_cm']
+
+        top_mm = top_cm * 10
+        bot_mm = bot_cm * 10
+
+        ram_mean, ram_max, ram_min = get_hardness(ram_df, top_cm, bot_cm)
+        smp_mean, smp_max, smp_min = get_hardness(smp_df, top_mm, bot_mm)
+
+        # Assign identifiers and calculated stats directly to strat_df
+        strat_df.insert(0, 'pit_id', site_date)
+
+        strat_df['ram_mean_N'] = ram_mean
+        strat_df['ram_min_N'] = ram_min
+        strat_df['ram_max_N'] = ram_max
+
+        strat_df['smp_mean_N'] = smp_mean
+        strat_df['smp_min_N'] = smp_min
+        strat_df['smp_max_N'] = smp_max
+
+        # Collect the populated DataFrame
+        all_pit_dfs.append(strat_df)
+    master_df = pd.concat(all_pit_dfs, ignore_index=True)
+
+    return master_df
+
+
 def ram_scope():
     common_ids = list(set(ram_ids).intersection(scope_ids, strat_ids))
 
@@ -73,34 +144,6 @@ def ram_scope():
         strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
     pass
 
-
-def ram_smp():
-    common_ids = list(set(ram_ids).intersection(smp_ids, strat_ids))
-
-    for site_date in common_ids:
-        ram_path = os.path.join(ram_dir, site_date + '_sram.csv')
-        smp_path = os.path.join(smp_dir, site_date + '_match_smp.csv')
-        strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
-
-        # read in data files
-        strat_df = pd.read_csv(strat_path)
-        ram_df = pd.read_csv(ram_path)
-        smp_path = pd.read_csv(smp_path)
-
-        # find top and bottom of layers, convert to depth, mm
-        top_cm = strat_df['top_cm']
-        bot_cm = strat_df['bottom_cm']
-        hs = top_cm.iloc[0]
-
-        top_d_cm = top_cm - hs
-        bot_d_cm = bot_cm - hs
-
-        top_d_mm = top_d_cm / 10
-        bot_d_mm = bot_d_cm / 10
-
-
-    pass
-ram_smp()
 
 def smp_scope():
     common_ids = list(set(smp_ids).intersection(scope_ids, strat_ids))
