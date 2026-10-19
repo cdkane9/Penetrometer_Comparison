@@ -10,3 +10,4 @@ data/
 /process_ingest/smp_cleaning_25_filled.xlsx
 /process_ingest/smp_cleaning_26_filled.xlsx
 /process_ingest/smp_cleaning_all.xlsx
+/force_analysis/__pycache__/
