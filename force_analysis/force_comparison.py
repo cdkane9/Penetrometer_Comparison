@@ -8,6 +8,7 @@ from pathlib import Path
 import os
 import re
 from matplotlib import pyplot as plt
+from tslearn.barycenters import dtw_barycenter_averaging
 from force_analysis.DTW.consensus_profile import prep_prof
 
 
@@ -86,16 +87,19 @@ def ram_smp() -> pd.DataFrame:
         smp_path = os.path.join(smp_dir, site_date + '_match_smp.csv')
         strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
 
+        print(ram_path)
+        print(smp_path)
 
         # read in data files
         strat_df = pd.read_csv(strat_path).copy()
         ram_df_raw = pd.read_csv(ram_path)
         # pull out depth and force from ram profile
         ram_df = pd.DataFrame({
-            'depth': ram_df_raw['l_cm'],
+            'depth': ram_df_raw['l_cm'] * 10,
             'force': ram_df_raw['rr_N']
         })
         smp_df = pd.read_csv(smp_path)
+
 
         '''fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.step(ram_df['force'], ram_df['depth'] * 10)
@@ -133,7 +137,7 @@ def ram_smp() -> pd.DataFrame:
     master_df = pd.concat(all_pit_dfs, ignore_index=True)
 
     return master_df
-
+ram_smp()
 
 def ram_scope():
     common_ids = list(set(ram_ids).intersection(scope_ids, strat_ids))
@@ -143,7 +147,6 @@ def ram_scope():
         scope_path = os.path.join(scope_dir, site_date + '_match_scope.csv')
         strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
     pass
-
 
 def smp_scope():
     common_ids = list(set(smp_ids).intersection(scope_ids, strat_ids))
