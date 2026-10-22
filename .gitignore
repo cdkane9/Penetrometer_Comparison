@@ -1,13 +1,29 @@
+# Byte-compiled / Python cache files (catches cache in ALL subdirectories)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and IDE config
 .DS_Store
+.idea/
+.vscode/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore Excel files generated or used during processing
+*.xlsx
+*.xls
+
+# Data directory strategy:
+# Option A (Current): If data is hosted elsewhere and shouldn't be in Git at all, keep data/ ignored:
 data/
 
-../.idea/
-.idea/
-
-/process_ingest/scope_cleaning_24_filled.xlsx
-/process_ingest/scope_cleaning_25_filled.xlsx
-/process_ingest/scope_cleaning_26_filled.xlsx
-/process_ingest/smp_cleaning_25_filled.xlsx
-/process_ingest/smp_cleaning_26_filled.xlsx
-/process_ingest/smp_cleaning_all.xlsx
-/force_analysis/DTW/__pycache__/
+# Option B (Recommended): Ignore large raw data files, but allow tracking folder structure or sample files
+# data/raw/*
+# !data/raw/.gitkeep
