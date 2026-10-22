@@ -43,11 +43,11 @@ def prep_profs(prof1, prof2):
     # find depth of the shallowest profile
     max_depth = min(prof1['depth'].max(), prof2['depth'].max()).astype(int)
 
-    #prof1 = smooth_profile_savgol(prof1[prof1['depth'] < max_depth], window_length=10, polyorder=3)
-    #prof2 = smooth_profile_savgol(prof2[prof2['depth'] < max_depth], window_length=10, polyorder=3)
+    prof1 = smooth_profile_savgol(prof1[prof1['depth'] < max_depth], window_length=10, polyorder=3)
+    prof2 = smooth_profile_savgol(prof2[prof2['depth'] < max_depth], window_length=10, polyorder=3)
 
-    prof1 = prof1[prof1['depth'] < max_depth]
-    prof2 = prof2[prof2['depth'] < max_depth]
+    #prof1 = prof1[prof1['depth'] < max_depth]
+    #prof2 = prof2[prof2['depth'] < max_depth]
 
     # create common depth grid to map profiles to
     common_depths = np.arange(0, max_depth + 1, 1)
