@@ -148,7 +148,7 @@ def ram_smp() -> pd.DataFrame:
     return master_df
 
 
-def ram_scope():
+def ram_scope() -> pd.DataFrame:
     common_ids = list(set(ram_ids).intersection(scope_ids, strat_ids))
     all_pit_dfs = []
 
@@ -201,28 +201,63 @@ def ram_scope():
     master_df = pd.concat(all_pit_dfs, ignore_index=True)
     return master_df
 
-def smp_scope():
+def smp_scope() -> pd.DataFrame:
     common_ids = list(set(smp_ids).intersection(scope_ids, strat_ids))
+    all_pit_dfs = []
 
     for site_date in common_ids:
         smp_path = os.path.join(smp_dir, site_date + '_match_smp.csv')
         scope_path = os.path.join(scope_dir, site_date + '_match_scope.csv')
         strat_path = os.path.join(strat_dir, site_date + '_strat.csv')
+        if not os.path.exists(strat_path):
+            continue
 
-        if not os.path.exists(scope_path):
-            print(scope_path)
-    pass
+        # read in data files
+
+        strat_df = pd.read_csv(strat_path).copy()
+        scope_df = pd.read_csv(scope_path)
+        smp_df = pd.read_csv(smp_path)
+
+        # match the scope to the SMP
+        formatted_profiles, common_depths = prep_profs(smp_df, scope_df)
+        smp_trimmed, scope_matched = match_profile(formatted_profiles,
+                                                   common_depths,
+                                                   radius=15)
+
+        # find top and bottom of stratigraphy layers, convert to mm
+        top_mm = strat_df['top_cm'] * 10
+        bot_mm = strat_df['bottom_cm'] * 10
+
+        scope_mean, scope_max, scope_min = get_hardness(scope_matched, top_mm, bot_mm)
+        smp_mean, smp_max, smp_min = get_hardness(smp_trimmed, top_mm, bot_mm)
+
+        # add calculated stats to stratigraphy df
+        strat_df.insert(0, 'pit_id', site_date)
+
+        strat_df['smp_mean_N'] = smp_mean
+        strat_df['smp_min_N'] = smp_min
+        strat_df['smp_max_N'] = smp_max
+
+        strat_df['scope_mean_N'] = scope_mean
+        strat_df['scope_min_N'] = scope_min
+        strat_df['scope_max_N'] = scope_max
+
+        all_pit_dfs.append(strat_df)
+    master_df = pd.concat(all_pit_dfs, ignore_index=True)
+    return master_df
+
+
 
 
 if __name__ == '__main__':
-    df = ram_scope()
+    df = smp_scope()
 
     print(df.columns)
-    ram = df['ram_mean_N']
+    smp = df['smp_mean_N']
     scope = df['scope_mean_N']
 
-    r = ram.corr(scope)
+    r = smp.corr(scope)
     print(r)
-    plt.scatter(ram, scope)
+    plt.scatter(scope, smp)
 
     plt.show()
