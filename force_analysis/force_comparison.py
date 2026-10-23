@@ -1,5 +1,5 @@
 '''
-Compares force values measured across consensus profiles generated for each pit
+Generates Data Frames with force values and stratigraphic properties
 '''
 
 import pandas as pd
@@ -13,7 +13,37 @@ from matplotlib import pyplot as plt
 
 
 script_dir = Path(__file__).resolve().parent.parent
+cache_dir = script_dir / 'data' / 'cache'
+cache_dir.mkdir(parents=True, exist_ok=True)
 
+def cache_dataframe(df: pd.DataFrame, name:str) -> Path:
+    '''Save a df to local cache directory'''
+    cache_path = cache_dir / f'{name}.pkl'
+    df.to_pickle(cache_path)
+    return cache_path
+
+def load_cached_dataframe(name: str) -> pd.DataFrame:
+    '''load df from local cache directory'''
+    cache_path = cache_dir / f'{name}.pkl'
+    return pd.read_pickle(cache_path)
+
+def get_cached_dataframe(name: str, generator_func, refresh: bool=False) -> pd.DataFrame:
+    '''
+    Load cached df if available, otherwise generate and cache it
+    :param name: cache filename w/o extension
+    :param generator_func: function that creates df
+    :param refresh: if True, regenerate even if cache exists
+    :return: df
+    '''
+
+    cache_path = cache_dir / f'{name}.pkl'
+
+    if cache_path.exists() and not refresh:
+        return pd.read_pickle(cache_path)
+
+    df = generator_func()
+    df.to_pickle(cache_path)
+    return df
 
 def get_ids(a_list):
     ''' Returns list of SITE_YYYYMMDD ids'''
@@ -75,7 +105,6 @@ def get_hardness(pen_df:pd.DataFrame, top:pd.Series, bot:pd.Series):
 
 
     return means, maxs, mins
-
 
 def ram_smp() -> pd.DataFrame:
     '''
@@ -146,7 +175,6 @@ def ram_smp() -> pd.DataFrame:
     master_df = pd.concat(all_pit_dfs, ignore_index=True)
 
     return master_df
-
 
 def ram_scope() -> pd.DataFrame:
     common_ids = list(set(ram_ids).intersection(scope_ids, strat_ids))
@@ -246,18 +274,16 @@ def smp_scope() -> pd.DataFrame:
     master_df = pd.concat(all_pit_dfs, ignore_index=True)
     return master_df
 
+def get_ram_smp(refresh: bool=False) -> pd.DataFrame:
+    return get_cached_dataframe('ram_smp', ram_smp, refresh=refresh)
 
+def get_ram_scope(refresh: bool=False) -> pd.DataFrame:
+    return get_cached_dataframe('ram_scope', ram_scope, refresh=refresh)
 
+def get_smp_scope(refresh: bool=False) -> pd.DataFrame:
+    return get_cached_dataframe('smp_scope', ram_scope, refresh=refresh)
 
 if __name__ == '__main__':
-    df = smp_scope()
-
-    print(df.columns)
-    smp = df['smp_mean_N']
-    scope = df['scope_mean_N']
-
-    r = smp.corr(scope)
-    print(r)
-    plt.scatter(scope, smp)
-
-    plt.show()
+    smp_ram = get_ram_smp()
+    scope_ram = get_ram_scope()
+    scope_smp = get_smp_scope()
