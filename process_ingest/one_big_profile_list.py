@@ -97,7 +97,7 @@ def build_profile_summary(
 
 if __name__ == "__main__":
     build_profile_summary(
-        smp_file="smp_cleaning_all.xlsx",
-        scope_file="scope_cleaning_all.xlsx",
+        smp_file="../data/smp_cleaning_all.xlsx",
+        scope_file="../data/scope_cleaning_all.xlsx",
         output_file="all_profiles.csv",
     )
