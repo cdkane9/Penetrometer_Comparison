@@ -281,9 +281,9 @@ def get_ram_scope(refresh: bool=False) -> pd.DataFrame:
     return get_cached_dataframe('ram_scope', ram_scope, refresh=refresh)
 
 def get_smp_scope(refresh: bool=False) -> pd.DataFrame:
-    return get_cached_dataframe('smp_scope', ram_scope, refresh=refresh)
+    return get_cached_dataframe('smp_scope', smp_scope, refresh=refresh)
 
 if __name__ == '__main__':
-    smp_ram = get_ram_smp()
-    scope_ram = get_ram_scope()
-    scope_smp = get_smp_scope()
+    #smp_ram = get_ram_smp()
+    #scope_ram = get_ram_scope()
+    scope_smp = get_smp_scope(True)
