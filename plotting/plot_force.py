@@ -4,18 +4,19 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, HuberRegressor
 
 project_dir = Path(__file__).resolve().parent.parent
 cache_dir = project_dir / 'data' / 'cache'
 
 ram_smp = pd.read_pickle(cache_dir / 'ram_smp.pkl')
-ram_smp = ram_smp[ram_smp['smp_mean_N'] < 6]
+#ram_smp = ram_smp[ram_smp['smp_mean_N'] < 6]
 scope_smp = pd.read_pickle(cache_dir / 'smp_scope.pkl')
-scope_smp = scope_smp[scope_smp['smp_mean_N'] < 6]
-print(scope_smp.columns)
+#scope_smp = scope_smp[scope_smp['smp_mean_N'] < 6]
+
 ram_scope = pd.read_pickle(cache_dir / 'ram_scope.pkl')
 
+print(ram_scope.columns)
 
 axis_labels = {
     'ram_mean_N': 'Ram Resistance [N]',
@@ -48,8 +49,11 @@ def reg_line(x, y):
     Calculate regression line for plotting
     :return:
     '''
+    r = x.corr(y)
+
     x = np.asarray(x)
     y = np.asarray(y)
+
 
     valid = ~np.isnan(x) & ~np.isnan(y)
 
@@ -57,14 +61,14 @@ def reg_line(x, y):
     y = y[valid]
 
     domain = np.linspace(x.min(), x.max(), 100)
-    model = LinearRegression()
+    model = HuberRegressor(fit_intercept=False)
     model.fit(x, y)
 
     m = model.coef_[0]
     b = model.intercept_
-    return domain, m, b
+    return domain, m, b, r
 
-def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None):
+def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None, title=None):
     '''
     Plot force comparison between instruments
     :param df: comparison dataframe
@@ -76,7 +80,7 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None):
     '''
 
     #title = input('Enter plot title: ')
-    title = ''
+    title = title
 
     columns = [pen_x, pen_y]
     if markerby is not None:
@@ -87,7 +91,7 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None):
     x = plot_df[pen_x]
     y = plot_df[pen_y]
 
-    domain, m, b = reg_line(x, y)
+    domain, m, b, r = reg_line(x, y)
 
     fig, ax = plt.subplots()
 
@@ -131,7 +135,7 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None):
     ax.plot(domain, m * domain + b,
             color='red',
             linewidth=2,
-            label=f'y = {m:.2f}x + {b:.2f}')
+            label=f'y = {m:.2f}x + {b:.2f}, r= {r:.2f}')
 
     ax.legend()
     ax.set_title(title)
@@ -140,8 +144,8 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None):
     return fig, ax
 
 
-    return
 
-plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type')
-plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type')
-plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type')
+
+plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type', title='SMP vs. Ram')
+plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type', title='Ram vs. Scope')
+plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type', title='SMP vs. Scope')
