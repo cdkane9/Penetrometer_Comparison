@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
-from matplotlib import pyplot as plt
+
 '''
 
 Read in scope(smp)_cleaning_all.xlsx, which has flags set for instances 
@@ -11,15 +11,15 @@ Read in scope(smp)_cleaning_all.xlsx, which has flags set for instances
 
 '''
 
-all_scopes = pd.read_excel('scope_cleaning_all.xlsx')
-all_smps = pd.read_excel('smp_cleaning_all.xlsx')
-
 
 # get paths to directories for respective instruments
 script_dir = Path(__file__).resolve().parent.parent
 smp_path = os.path.join(script_dir,'data', 'pen_profiles', 'smp_profiles_exports')
 scope_path = os.path.join(script_dir, 'data', 'pen_profiles', 'Snow_Scope')
 
+
+all_scopes = pd.read_excel(script_dir / 'data' / 'scope_cleaning_all.xlsx')
+all_smps = pd.read_excel(script_dir / 'data' / 'smp_cleaning_all.xlsx')
 
 
 
