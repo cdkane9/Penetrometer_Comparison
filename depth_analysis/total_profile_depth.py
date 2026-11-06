@@ -16,6 +16,9 @@ scope_matrix_path = project_dir / 'data' / 'pit_matrix'
 scope_mats = [i for i in os.listdir(scope_matrix_path)
               if i.endswith('_scope.csv')]
 
+def rmse(y_true, y_pred):
+    return np.sqrt(np.mean((y_true - y_pred) ** 2))
+
 # initialize dictionary to store manual and digital profile depths
 man_dig = {
     'd_m': [],
@@ -45,15 +48,23 @@ def get_WY(filename: str) -> str:
 def percent_diff(row):
     return (row['d_d'] - row['d_m']) / row['d_m'] * 100
 
-def add_reg_line_to_plot(df, col_x, col_y, axis):
+def add_reg_line_to_plot(df, col_x, col_y, axis, RMSE=False):
     x = df[col_x]
     y = df[col_y]
 
     domain = np.linspace(0, x.max(), 100)
 
     m, b, r_val, p_val, std_err = linregress(x, y)
-    axis.plot(domain, m*domain + b, color='black', linestyle='-', linewidth=2,
-            label=f'y = {m:.2f}x + {b:.2f}, r = {r_val:.2f}')
+    y_pred = m * x + b
+    if RMSE:
+        rmse_val = rmse(y_pred, y)
+        axis.plot(domain, m*domain + b, color='black', linestyle='-', linewidth=2,
+                label=f'y = {m:.2f}x + {b:.2f}, r = {r_val:.2f},\n RMSE = {rmse_val:.2f}')
+    else:
+
+        axis.plot(domain, m * domain + b, color='black', linestyle='-', linewidth=2,
+                  label=f'y = {m:.2f}x + {b:.2f}, r = {r_val:.2f}')
+
 
     return axis
 
