@@ -82,8 +82,8 @@ def get_hardness(pen_df:pd.DataFrame, top:pd.Series, bot:pd.Series):
     # convert top and bot to depths, add 20% buffer
     hs = top.iloc[0]
     delta = top - bot
-    t_depths = ((hs - top) + (0.1 * delta))
-    b_depths = ((hs - bot) - (0.1 * delta))
+    t_depths = ((hs - top) + (-0.1 * delta))
+    b_depths = ((hs - bot) - (-0.1 * delta))
 
     means, maxs, mins = [], [], []
 
@@ -284,6 +284,7 @@ def get_smp_scope(refresh: bool=False) -> pd.DataFrame:
     return get_cached_dataframe('smp_scope', smp_scope, refresh=refresh)
 
 if __name__ == '__main__':
-    #smp_ram = get_ram_smp()
-    #scope_ram = get_ram_scope()
-    scope_smp = get_smp_scope(True)
+    smp_ram = get_ram_smp(refresh=True)
+    scope_ram = get_ram_scope(refresh=True)
+    scope_smp = get_smp_scope(refresh=True)
+    pass
