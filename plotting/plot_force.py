@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 from sklearn.linear_model import LinearRegression, HuberRegressor
+import mplcursors
 
 project_dir = Path(__file__).resolve().parent.parent
 cache_dir = project_dir / 'data' / 'cache'
@@ -25,6 +26,8 @@ axis_labels = {
     'grain avg_mm': 'Grain Size [mm]',
     'type': 'Grain Type',
     'density_kgm3': 'Density [kg/m3]',
+    'ram_max_N': 'Max Ram Resistance [N]',
+    'scope_max_N': 'Max Scope Force [N]'
 }
 
 grain_type = {
@@ -164,37 +167,81 @@ def three_panel_force(df, pen_x, pen_y):
 
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(6, 6))
     ax1, ax2, ax3, ax4 = axes.flat
-
+    # added functionality for determining pit_id of certain points
+    '''
     ax1.set_title('PP/DF')
     ax1.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax1.set_xlabel(axis_labels[pen_x])
     ax1.set_ylabel(axis_labels[pen_y])
+
+    # 1. Capture the PathCollection returned by scatter
+    sc1 = ax1.scatter(ns_df[pen_x], ns_df[pen_y], s=15, alpha=1, label='NS')
+
+    # 2. Attach mplcursors hover tooltips to ax1's scatter plot
+    cursor1 = mplcursors.cursor(sc1, hover=True)
+
+    @cursor1.connect("add")
+    def on_add_ax1(sel):
+        # Extract pit_id matching the hovered scatter point's index
+        pit_id = ns_df['pit_id'].iloc[sel.index]
+        sel.annotation.set_text(f"pit_id: {pit_id}")
+        sel.annotation.get_bbox_patch().set(fc="white", alpha=0.9, edgecolor="gray")'''
+
+    ax1.set_title('PP/DF')
+    ax1_domain, ax1_m, ax1_b, ax1_r = reg_line(ns_df[pen_x], ns_df[pen_y])
+    ax1.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax1.set_xlabel(axis_labels[pen_x])
+    ax1.set_ylabel(axis_labels[pen_y])
     ax1.scatter(ns_df[pen_x], ns_df[pen_y], s=15, alpha=1, label='NS')
+    ax1.plot(ax1_domain, ax1_m * ax1_domain + ax1_b,
+             color='red',
+             linewidth=2,
+             label=f'y = {ax1_m:.4f}x + {ax1_b:.4f}, r= {ax1_r:.2f}')
+    ax1.legend()
 
     ax2.set_title('RG')
+    ax2_domain, ax2_m, ax2_b, ax2_r = reg_line(eq_df[pen_x], eq_df[pen_y])
     ax2.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax2.set_xlabel(axis_labels[pen_x])
     ax2.set_ylabel(axis_labels[pen_y])
     ax2.scatter(eq_df[pen_x], eq_df[pen_y], s=15, alpha=1, label='EQ')
+    ax2.plot(ax2_domain, ax2_m * ax2_domain + ax2_b,
+             color='red',
+             linewidth=2,
+             label=f'y = {ax2_m:.4f}x + {ax2_b:.4f}, r= {ax2_r:.2f}')
+    ax2.legend()
 
     ax3.set_title('FC/DH/SH')
+    ax3_domain, ax3_m, ax3_b, ax3_r = reg_line(kn_df[pen_x], kn_df[pen_y])
     ax3.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax3.set_xlabel(axis_labels[pen_x])
     ax3.set_ylabel(axis_labels[pen_y])
     ax3.scatter(kn_df[pen_x], kn_df[pen_y], s=15, alpha=1, label='KN')
+    ax3.plot(ax3_domain, ax3_m * ax3_domain + ax3_b,
+             color='red',
+             linewidth=2,
+             label=f'y = {ax3_m:.4f}x + {ax3_b:.4f}, r= {ax3_r:.2f}')
+    ax3.legend()
+
 
     ax4.set_title('MF')
+    ax4_domain, ax4_m, ax4_b, ax4_r = reg_line(mf_df[pen_x], mf_df[pen_y])
     ax4.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax4.set_xlabel(axis_labels[pen_x])
     ax4.set_ylabel(axis_labels[pen_y])
     ax4.scatter(mf_df[pen_x], mf_df[pen_y], s=15, alpha=1, label='MF')
+    ax4.plot(ax4_domain, ax4_m * ax4_domain + ax4_b,
+             color='red',
+             linewidth=2,
+             label=f'y = {ax4_m:.4f}x + {ax4_b:.4f}, r= {ax4_r:.2f}')
+    ax4.legend()
+
 
     fig.suptitle(f'{pen_x} vs. {pen_y}')
     plt.tight_layout()
     plt.show()
 
     return
-
 
 
 three_panel_force(scope_smp, 'smp_mean_N', 'scope_mean_N')
