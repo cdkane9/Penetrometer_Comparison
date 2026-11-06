@@ -143,9 +143,64 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None, tit
 
     return fig, ax
 
+def three_panel_force(df, pen_x, pen_y):
+    '''
+    plot four panels: PP/DF, equilibrium, kinetic, and melt forms
+    :param df:
+    :param pen_x:
+    :param pen_y:
+    :return:
+    '''
+
+    df['major_grain_type'] = df['type'].astype(str).str[:2]
+    df['process'] = df['major_grain_type'].map(grain_type)
+
+    ns_df = df[df['major_grain_type'].isin(['PP', 'DF'])]
+    eq_df = df[df['major_grain_type'] == 'RG']
+    kn_df = df[df['major_grain_type'].isin(['FC', 'DH'])]
+    mf_df = df[df['major_grain_type'] == 'MF']
 
 
 
-plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type', title='SMP vs. Ram')
-plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type', title='Ram vs. Scope')
-plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type', title='SMP vs. Scope')
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(6, 6))
+    ax1, ax2, ax3, ax4 = axes.flat
+
+    ax1.set_title('PP/DF')
+    ax1.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax1.set_xlabel(axis_labels[pen_x])
+    ax1.set_ylabel(axis_labels[pen_y])
+    ax1.scatter(ns_df[pen_x], ns_df[pen_y], s=15, alpha=1, label='NS')
+
+    ax2.set_title('RG')
+    ax2.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax2.set_xlabel(axis_labels[pen_x])
+    ax2.set_ylabel(axis_labels[pen_y])
+    ax2.scatter(eq_df[pen_x], eq_df[pen_y], s=15, alpha=1, label='EQ')
+
+    ax3.set_title('FC/DH/SH')
+    ax3.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax3.set_xlabel(axis_labels[pen_x])
+    ax3.set_ylabel(axis_labels[pen_y])
+    ax3.scatter(kn_df[pen_x], kn_df[pen_y], s=15, alpha=1, label='KN')
+
+    ax4.set_title('MF')
+    ax4.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax4.set_xlabel(axis_labels[pen_x])
+    ax4.set_ylabel(axis_labels[pen_y])
+    ax4.scatter(mf_df[pen_x], mf_df[pen_y], s=15, alpha=1, label='MF')
+
+    fig.suptitle(f'{pen_x} vs. {pen_y}')
+    plt.tight_layout()
+    plt.show()
+
+    return
+
+
+
+three_panel_force(scope_smp, 'smp_mean_N', 'scope_mean_N')
+three_panel_force(ram_smp, 'smp_mean_N', 'ram_mean_N')
+three_panel_force(ram_scope, 'ram_mean_N', 'scope_mean_N')
+
+#plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type', title='SMP vs. Ram')
+#plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type', title='Ram vs. Scope')
+#plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type', title='SMP vs. Scope')
