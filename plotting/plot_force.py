@@ -11,10 +11,7 @@ project_dir = Path(__file__).resolve().parent.parent
 cache_dir = project_dir / 'data' / 'cache'
 
 ram_smp = pd.read_pickle(cache_dir / 'ram_smp.pkl')
-#ram_smp = ram_smp[ram_smp['smp_mean_N'] < 6]
 scope_smp = pd.read_pickle(cache_dir / 'smp_scope.pkl')
-#scope_smp = scope_smp[scope_smp['smp_mean_N'] < 6]
-
 ram_scope = pd.read_pickle(cache_dir / 'ram_scope.pkl')
 
 print(ram_scope.columns)
@@ -47,29 +44,48 @@ process_markers = {
     'MF': r'$\infty$',
 }
 
-def reg_line(x, y):
+def reg_line(x, y, intercept=False, model='linear'):
     '''
     Calculate regression line for plotting
     :return:
     '''
-    r = x.corr(y)
+    x_ser = pd.to_numeric(pd.Series(x), errors='coerce')
+    y_ser = pd.to_numeric(pd.Series(y), errors='coerce')
 
-    x = np.asarray(x)
-    y = np.asarray(y)
+    r = x_ser.corr(y_ser)
 
+    x = x_ser.to_numpy()
+    y = y_ser.to_numpy()
 
-    valid = ~np.isnan(x) & ~np.isnan(y)
+    if model == 'log':
+        valid = ~np.isnan(x) & ~np.isnan(y) & (x > 0)
+    else:
+        valid = ~np.isnan(x) & ~np.isnan(y)
 
-    x = x[valid].reshape(-1, 1)
-    y = y[valid]
+    x_clean = x[valid]
+    y_clean = y[valid]
 
-    domain = np.linspace(x.min(), x.max(), 100)
-    model = HuberRegressor(fit_intercept=False)
-    model.fit(x, y)
+    domain = np.linspace(x_clean.min(), x_clean.max(), len(x_ser))
 
-    m = model.coef_[0]
-    b = model.intercept_
-    return domain, m, b, r
+    if model == 'linear':
+        X_fit = x_clean.reshape(-1, 1)
+        reg = HuberRegressor(fit_intercept=intercept)
+        reg.fit(X_fit, y_clean)
+
+        m = reg.coef_[0]
+        b = reg.intercept_
+        return domain, m, b, r
+
+    elif model == 'log':
+        # Transform x using natural log: y = m * ln(x) + b
+        X_log = np.log(x_clean).reshape(-1, 1)
+        reg = HuberRegressor(fit_intercept=True)
+        reg.fit(X_log, y_clean)
+
+        m = reg.coef_[0]
+        b = reg.intercept_
+        return domain, m, b, r
+
 
 def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None, title=None):
     '''
@@ -146,7 +162,7 @@ def plot_force(df, pen_x, pen_y, shadeby=None, markerby=None, err_bars=None, tit
 
     return fig, ax
 
-def three_panel_force(df, pen_x, pen_y):
+def three_panel_force(df, pen_x, pen_y, model='linear'):
     '''
     plot four panels: PP/DF, equilibrium, kinetic, and melt forms
     :param df:
@@ -165,7 +181,7 @@ def three_panel_force(df, pen_x, pen_y):
 
 
 
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(6, 6))
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(9, 9))
     ax1, ax2, ax3, ax4 = axes.flat
     # added functionality for determining pit_id of certain points
     '''
@@ -188,52 +204,86 @@ def three_panel_force(df, pen_x, pen_y):
         sel.annotation.get_bbox_patch().set(fc="white", alpha=0.9, edgecolor="gray")'''
 
     ax1.set_title('PP/DF')
-    ax1_domain, ax1_m, ax1_b, ax1_r = reg_line(ns_df[pen_x], ns_df[pen_y])
+    ax1_domain, ax1_m, ax1_b, ax1_r = reg_line(ns_df[pen_x], ns_df[pen_y], model=model)
     ax1.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax1.set_xlabel(axis_labels[pen_x])
     ax1.set_ylabel(axis_labels[pen_y])
-    ax1.scatter(ns_df[pen_x], ns_df[pen_y], s=15, alpha=1, label='NS')
-    ax1.plot(ax1_domain, ax1_m * ax1_domain + ax1_b,
-             color='red',
-             linewidth=2,
-             label=f'y = {ax1_m:.4f}x + {ax1_b:.4f}, r= {ax1_r:.2f}')
+    ax1.scatter(ns_df[pen_x], ns_df[pen_y], s=15, alpha=1)
+    if model == 'linear':
+        ax1.plot(ax1_domain, ax1_m * ax1_domain + ax1_b,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax1_m:.4f}x + {ax1_b:.4f}, r= {ax1_r:.2f}')
+
+    else:
+        ax1_ycurve = ax1_m * np.log(ax1_domain) + ax1_b
+        ax1_rmse = np.sqrt(np.mean((ax1_ycurve - ns_df[pen_y]) ** 2))
+        ax1.plot(ax1_domain, ax1_ycurve,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax1_m:.2f}ln(x) + {ax1_b:.2f}, RMSE = {ax1_rmse:.2f}')
     ax1.legend()
 
     ax2.set_title('RG')
-    ax2_domain, ax2_m, ax2_b, ax2_r = reg_line(eq_df[pen_x], eq_df[pen_y])
+    ax2_domain, ax2_m, ax2_b, ax2_r = reg_line(eq_df[pen_x], eq_df[pen_y], model=model)
     ax2.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax2.set_xlabel(axis_labels[pen_x])
     ax2.set_ylabel(axis_labels[pen_y])
-    ax2.scatter(eq_df[pen_x], eq_df[pen_y], s=15, alpha=1, label='EQ')
-    ax2.plot(ax2_domain, ax2_m * ax2_domain + ax2_b,
-             color='red',
-             linewidth=2,
-             label=f'y = {ax2_m:.4f}x + {ax2_b:.4f}, r= {ax2_r:.2f}')
+    ax2.scatter(eq_df[pen_x], eq_df[pen_y], s=15, alpha=1)
+    if model == 'linear':
+        ax2.plot(ax2_domain, ax2_m * ax2_domain + ax2_b,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax2_m:.4f}x + {ax2_b:.4f}, r= {ax2_r:.2f}')
+    else:
+        ax2_ycurve = ax2_m * np.log(ax2_domain) + ax2_b
+        ax2_rmse = np.sqrt(np.mean((ax2_ycurve - eq_df[pen_y]) ** 2))
+        ax2.plot(ax2_domain, ax2_ycurve,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax2_m:.2f}ln(x) + {ax2_b:.2f}, RMSE = {ax2_rmse:.2f}'
+        )
     ax2.legend()
 
     ax3.set_title('FC/DH/SH')
-    ax3_domain, ax3_m, ax3_b, ax3_r = reg_line(kn_df[pen_x], kn_df[pen_y])
+    ax3_domain, ax3_m, ax3_b, ax3_r = reg_line(kn_df[pen_x], kn_df[pen_y], model=model)
     ax3.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax3.set_xlabel(axis_labels[pen_x])
     ax3.set_ylabel(axis_labels[pen_y])
-    ax3.scatter(kn_df[pen_x], kn_df[pen_y], s=15, alpha=1, label='KN')
-    ax3.plot(ax3_domain, ax3_m * ax3_domain + ax3_b,
-             color='red',
-             linewidth=2,
-             label=f'y = {ax3_m:.4f}x + {ax3_b:.4f}, r= {ax3_r:.2f}')
+    ax3.scatter(kn_df[pen_x], kn_df[pen_y], s=15, alpha=1)
+    if model == 'linear':
+        ax3.plot(ax3_domain, ax3_m * ax3_domain + ax3_b,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax3_m:.4f}x + {ax3_b:.4f}, r= {ax3_r:.2f}')
+    else:
+        ax3_ycurve = ax3_m * np.log(ax3_domain) + ax3_b
+        ax3_rmse = np.sqrt(np.mean((ax3_ycurve - kn_df[pen_y]) ** 2))
+        ax3.plot(ax3_domain, ax3_ycurve,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax3_m:.2f}ln(x) + {ax3_b:.2f}, RMSE= {ax3_rmse:.2f}')
     ax3.legend()
 
 
     ax4.set_title('MF')
-    ax4_domain, ax4_m, ax4_b, ax4_r = reg_line(mf_df[pen_x], mf_df[pen_y])
+    ax4_domain, ax4_m, ax4_b, ax4_r = reg_line(mf_df[pen_x], mf_df[pen_y], model=model)
     ax4.grid(True, linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
     ax4.set_xlabel(axis_labels[pen_x])
     ax4.set_ylabel(axis_labels[pen_y])
-    ax4.scatter(mf_df[pen_x], mf_df[pen_y], s=15, alpha=1, label='MF')
-    ax4.plot(ax4_domain, ax4_m * ax4_domain + ax4_b,
-             color='red',
-             linewidth=2,
-             label=f'y = {ax4_m:.4f}x + {ax4_b:.4f}, r= {ax4_r:.2f}')
+    ax4.scatter(mf_df[pen_x], mf_df[pen_y], s=15, alpha=1)
+    if model == 'linear':
+        ax4.plot(ax4_domain, ax4_m * ax4_domain + ax4_b,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax4_m:.4f}x + {ax4_b:.4f}, r= {ax4_r:.2f}')
+    else:
+        ax4_ycurve = ax4_m * np.log(ax4_domain) + ax4_b
+        ax4_rmse = np.sqrt(np.mean((ax4_ycurve - mf_df[pen_y]) ** 2))
+        ax4.plot(ax4_domain, ax4_ycurve,
+                 color='red',
+                 linewidth=2,
+                 label=f'y = {ax4_m:.2f}ln(x) + {ax4_b:.2f}, RMSE = {ax4_rmse:.2f}')
     ax4.legend()
 
 
@@ -243,11 +293,11 @@ def three_panel_force(df, pen_x, pen_y):
 
     return
 
+if __name__ == '__main__':
+    three_panel_force(scope_smp, 'smp_mean_N', 'scope_mean_N')
+    three_panel_force(ram_smp, 'smp_mean_N', 'ram_mean_N')
+    three_panel_force(ram_scope, 'ram_mean_N', 'scope_mean_N')
 
-three_panel_force(scope_smp, 'smp_mean_N', 'scope_mean_N')
-three_panel_force(ram_smp, 'smp_mean_N', 'ram_mean_N')
-three_panel_force(ram_scope, 'ram_mean_N', 'scope_mean_N')
-
-#plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type', title='SMP vs. Ram')
-#plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type', title='Ram vs. Scope')
-#plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type', title='SMP vs. Scope')
+    #plot_force(ram_smp, 'smp_mean_N', 'ram_mean_N', markerby='type', title='SMP vs. Ram')
+    #plot_force(ram_scope, 'ram_mean_N', 'scope_mean_N', markerby='type', title='Ram vs. Scope')
+    #plot_force(scope_smp, 'smp_mean_N', 'scope_mean_N', markerby='type', title='SMP vs. Scope')
