@@ -1,14 +1,18 @@
 '''
 Generate a number of plots/analyses to evaluate how well DTW algorithm performs
 '''
-import pandas as pd
-from matplotlib import pyplot as plt
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+import pandas as pd
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib import pyplot as plt
+plt.ioff()
 
 from pathlib import Path
 from consensus_profile import scope_head, smp_head

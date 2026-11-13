@@ -132,14 +132,14 @@ def ram_smp() -> pd.DataFrame:
 
         # read in consensus SMP profile
         smp_df = pd.read_csv(smp_path)
-        '''
+
         # match the ram to the SMP profile
         formatted_profiles, common_depths = prep_profs(smp_df, ram_df)
         smp_trimmed, ram_matched = match_profile(formatted_profiles,
                                                  common_depths,
-                                                 radius=15)
+                                                 itakura_max_slope=2)
 
-        
+        '''
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.step(ram_trimmed['force'], ram_trimmed['depth'])
         ax1.set_title('Ram')
@@ -179,6 +179,7 @@ def ram_smp() -> pd.DataFrame:
 def ram_scope() -> pd.DataFrame:
     common_ids = list(set(ram_ids).intersection(scope_ids, strat_ids))
     all_pit_dfs = []
+    skipped_profiles = []
 
     for site_date in common_ids:
         ram_path = os.path.join(ram_dir, site_date + '_sram.csv')
@@ -196,22 +197,27 @@ def ram_scope() -> pd.DataFrame:
         })
 
 
-        # read in consensus SMP profile
+        # read in consensus scope profile
         scope_df = pd.read_csv(scope_path)
 
 
-        # match profiles
-        #formatted_profiles, common_depths = prep_profs(scope_df, ram_df)
-        #scope_trimmed, ram_matched = match_profile(formatted_profiles,
-        #                                           common_depths,
-        #                                           radius=15)
+        try:
+            # match profiles
+            formatted_profiles, common_depths = prep_profs(scope_df, ram_df)
+            scope_trimmed, ram_matched = match_profile(formatted_profiles,
+                                                       common_depths,
+                                                       itakura_max_slope=2)
+        except ValueError as exc:
+            skipped_profiles.append((site_date, str(exc)))
+            print(f'Skipping {site_date}: {exc}')
+            continue
 
         # find top and bottom of layers, convert to mm
         top_mm = strat_df['top_cm'] * 10
         bot_mm = strat_df['bottom_cm'] * 10
 
-        ram_mean, ram_max, ram_min = get_hardness(ram_df, top_mm, bot_mm)
-        scope_mean, scope_max, scope_min = get_hardness(scope_df, top_mm, bot_mm)
+        ram_mean, ram_max, ram_min = get_hardness(ram_matched, top_mm, bot_mm)
+        scope_mean, scope_max, scope_min = get_hardness(scope_trimmed, top_mm, bot_mm)
 
         # add calculated stats to the stratigraphy df
         strat_df.insert(0, 'pit_id', site_date)
@@ -250,7 +256,7 @@ def smp_scope() -> pd.DataFrame:
         formatted_profiles, common_depths = prep_profs(smp_df, scope_df)
         smp_trimmed, scope_matched = match_profile(formatted_profiles,
                                                    common_depths,
-                                                   radius=15)
+                                                   itakura_max_slope=2)
 
         # find top and bottom of stratigraphy layers, convert to mm
         top_mm = strat_df['top_cm'] * 10
@@ -284,7 +290,7 @@ def get_smp_scope(refresh: bool=False) -> pd.DataFrame:
     return get_cached_dataframe('smp_scope', smp_scope, refresh=refresh)
 
 if __name__ == '__main__':
-    smp_ram = get_ram_smp(refresh=True)
+    #smp_ram = get_ram_smp(refresh=True)
     scope_ram = get_ram_scope(refresh=True)
-    scope_smp = get_smp_scope(refresh=True)
+    #scope_smp = get_smp_scope(refresh=True)
     pass
