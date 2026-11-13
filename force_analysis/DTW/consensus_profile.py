@@ -110,7 +110,7 @@ def export_consensus_profile(row, output_dir, pen):
             formatted_arr,
             max_iter=30,
             tol=1e-5,
-            metric_params={'sakoe_chiba_radius': 0}
+            metric_params={'sakoe_chiba_radius': 20}
         ).ravel()
 
         # 3. Create clean DataFrame

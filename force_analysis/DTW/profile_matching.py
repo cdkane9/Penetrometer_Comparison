@@ -78,6 +78,7 @@ def match_profile(profiles, depths, radius=15, max_iter=30, tol=1e-5):
     prof2_to_warp_force = profiles[1, :, 0]  # To be warped
 
     # Set constraint window
+    #metric_params = {'itakura_max_slope': 1}
     metric_params = {}
     if radius is not None and radius > 0:
         metric_params['sakoe_chiba_radius'] = int(radius)
