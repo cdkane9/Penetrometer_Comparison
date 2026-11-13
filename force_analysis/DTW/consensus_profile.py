@@ -2,7 +2,7 @@ import openpyxl
 import pandas as pd
 import numpy as np
 from tslearn.barycenters import dtw_barycenter_averaging
-from tslearn.metrics import dtw_path
+from tslearn.metrics import dtw_path_from_metric
 import os
 import ast
 from pathlib import Path
@@ -78,7 +78,7 @@ def prep_prof(paths, penetrometer, step_mm=1.0):
         except Exception as e:
             print(f"Error reading {path}: {e}")
 
-        raw_dfs.append(df)
+
 
     # determine global max/min depth for all profiles
     min_depth = max(df['depth'].min() for df in raw_dfs)
@@ -96,6 +96,62 @@ def prep_prof(paths, penetrometer, step_mm=1.0):
 
     return formatted_profiles, common_depths
 ######################################################
+def dba_absolute_distance(X, max_iter=30, tol=1e-5,
+                          itakura_max_slope=2):
+    '''
+    Uses absolute distance (cityblock) to calculate distance between profiles
+    :param X: 3D numpy array w/ shape (n_profiles, length, 1)
+    :param max_iter: total number of iterations (might remove)
+    :param tol: cost improvement threshold (might remove)
+    :param sakoe_chiba_radius:
+    :return: 1D numpy array of consensus force values
+    '''
+
+    n_series, length, _ = X.shape
+
+    # generate initial consensus profile (i.e. mean of all profiles)
+    barycenter = np.median(X, axis=0)
+    prev_cost = np.inf
+
+    constraint_kwargs = {}
+    if itakura_max_slope is not None and itakura_max_slope > 0:
+        constraint_kwargs = {
+            'global_constraint': 'itakura',
+            'itakura_max_slope': int(itakura_max_slope)
+        }
+
+    for _ in range(max_iter):
+        aligned_values = [[] for _ in range(length)]
+        total_cost = 0
+
+        # align each profile to current consensus using absolute distance
+        for i in range(n_series):
+            path, cost = dtw_path_from_metric(
+                barycenter,
+                X[i],
+                metric='cityblock',
+                **constraint_kwargs
+            )
+            total_cost += cost
+            for idx_b, idx_x in path:
+                aligned_values[idx_b].append(X[i, idx_x, 0])
+
+        # update new consensus profile with mean of wapred profiles
+        new_barycenter = np.copy(barycenter)
+        for t in range(length):
+            if aligned_values[t]:
+                new_barycenter[t] = np.median(aligned_values[t])
+
+        barycenter = new_barycenter
+
+        # check convergence
+        if abs(prev_cost - total_cost) < tol:
+            break
+        prev_cost = total_cost
+
+    return barycenter.ravel()
+
+######################################################
 def export_consensus_profile(row, output_dir, pen):
     pit_id = row['id']
     formatted_arr = row['formatted']
@@ -106,12 +162,12 @@ def export_consensus_profile(row, output_dir, pen):
         return None
 
     try:
-        consensus_force = dtw_barycenter_averaging(
+        consensus_force = dba_absolute_distance(
             formatted_arr,
             max_iter=30,
             tol=1e-5,
-            metric_params={'sakoe_chiba_radius': 0}
-        ).ravel()
+            itakura_max_slope=3
+        )
 
         # 3. Create clean DataFrame
         matched_df = pd.DataFrame({
