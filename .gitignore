@@ -27,3 +27,6 @@ data/
 # Option B (Recommended): Ignore large raw data files, but allow tracking folder structure or sample files
 # data/raw/*
 # !data/raw/.gitkeep
+force_analysis/DTW/hh_test.py
+
+# Scripts for testing
