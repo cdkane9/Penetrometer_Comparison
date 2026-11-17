@@ -99,5 +99,5 @@ if __name__ == "__main__":
     build_profile_summary(
         smp_file="../data/smp_cleaning_all.xlsx",
         scope_file="../data/scope_cleaning_all.xlsx",
-        output_file="all_profiles.csv",
+        output_file="all_profiles_CLEANED.csv",
     )
