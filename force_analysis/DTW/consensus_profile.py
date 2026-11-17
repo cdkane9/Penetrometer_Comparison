@@ -192,7 +192,7 @@ def export_consensus_profile(row, output_dir, pen):
 if __name__ == '__main__':
     # read in all_profiles.csv
 
-    all_pen_paths = pd.read_csv(os.path.join(project_dir, 'process_ingest', 'all_profiles.csv'))
+    all_pen_paths = pd.read_csv(os.path.join(project_dir, 'process_ingest', 'all_profiles_CLEANED.csv'))
 
     # group all pit_id and scope_paths together
     scope_profs = pd.DataFrame({
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     # filter out empty rows from scope_profs and smp_profs
     scope_profs = scope_profs[scope_profs['scope_paths'].map(len) > 0].copy()
     smp_profs = smp_profs[smp_profs['smp_paths'].map(len) > 0].copy()
-
+'''
     # generate and export saved files
     scope_profs[['formatted', 'common_depth']] = scope_profs['scope_paths'].apply(
         lambda paths: pd.Series(prep_prof(paths, penetrometer='scope', step_mm=1.0))
@@ -227,3 +227,4 @@ if __name__ == '__main__':
                                                    output_dir=os.path.join(project_dir, 'data/consensus/smp'),
                                                    pen='smp')
 
+'''
